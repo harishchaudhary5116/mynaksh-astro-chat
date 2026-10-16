@@ -1,0 +1,58 @@
+### Sample API requests
+### TODO: fill with real request/response pairs once the endpoints work.
+
+### 1. Create a user profile
+POST http://localhost:8000/users
+Content-Type: application/json
+
+{
+  "user_id": "user-123",
+  "name": "Rahul",
+  "dob": "1995-08-15",
+  "tob": "09:30",
+  "birth_place": "Delhi",
+  "language": "en"
+}
+
+### 2. First message — states a goal worth remembering
+POST http://localhost:8000/chat
+Content-Type: application/json
+
+{
+  "user_id": "user-123",
+  "session_id": "session-456",
+  "message": "My name is Rahul. I was born on 15 August 1995 in Delhi. I'm planning to switch jobs next year."
+}
+
+### 3. Uses the stored goal
+POST http://localhost:8000/chat
+Content-Type: application/json
+
+{
+  "user_id": "user-123",
+  "session_id": "session-456",
+  "message": "What should I focus on for my career?"
+}
+
+### 4. Follow-up — should use short-term context only
+POST http://localhost:8000/chat
+Content-Type: application/json
+
+{
+  "user_id": "user-123",
+  "session_id": "session-456",
+  "message": "Why do you say that?"
+}
+
+### 5. New session — must recall from the Shared Brain
+POST http://localhost:8000/chat
+Content-Type: application/json
+
+{
+  "user_id": "user-123",
+  "session_id": "session-999",
+  "message": "What do you remember about my career goals?"
+}
+
+### 6. Inspect the Shared Brain
+GET http://localhost:8000/users/user-123/brain

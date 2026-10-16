@@ -1,0 +1,18 @@
+# --- web layer ---
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.0
+
+# --- graph store ---
+neo4j==5.27.0
+
+# --- llm providers (install only the one you use) ---
+anthropic==0.42.0
+# openai==1.59.0
+# google-generativeai==0.8.3
+
+# --- tests ---
+pytest==8.3.4
+pytest-asyncio==0.25.0
+httpx==0.28.1
