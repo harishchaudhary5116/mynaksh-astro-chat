@@ -44,3 +44,36 @@ class BrainStore(ABC):
 
     @abstractmethod
     def health(self) -> bool: ...
+
+
+# --------------------------------------------------------------- graph vocabulary
+# Both stores share this, so the Cypher schema and the in-memory fallback can
+# never drift apart. Fact type -> (relationship type, shared entity label).
+RELATIONSHIPS: dict[str, tuple[str, str]] = {
+    "GOAL": ("HAS_GOAL", "Goal"),
+    "INTEREST": ("INTERESTED_IN", "Interest"),
+    "PREFERENCE": ("PREFERS", "Preference"),
+    "LIFE_AREA": ("FOCUSES_ON", "LifeArea"),
+    "MEMORY": ("REMEMBERS", "Memory"),
+    "ZODIAC": ("HAS_ZODIAC", "ZodiacSign"),
+}
+
+# What a broad retrieval searches. HAS_ZODIAC is deliberately excluded: the sun
+# sign already rides along on the profile line, and spending one of the five
+# fact slots to say it twice is exactly the waste the brief warns about.
+DEFAULT_REL_TYPES: list[str] = [
+    "HAS_GOAL", "INTERESTED_IN", "PREFERS", "FOCUSES_ON", "REMEMBERS",
+]
+
+
+def slugify(text: str) -> str:
+    """Stable entity key, so 'Career Change' and 'career change' are one node.
+
+    Dedup lives in the key: `MERGE (:Goal {key: 'career-change'})` is idempotent,
+    which is what lets the same goal be mentioned five times without five nodes.
+    """
+    cleaned = [c.lower() if c.isalnum() else "-" for c in text.strip()]
+    slug = "".join(cleaned)
+    while "--" in slug:
+        slug = slug.replace("--", "-")
+    return slug.strip("-")[:80] or "unknown"

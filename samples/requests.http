@@ -1,7 +1,13 @@
-### Sample API requests
-### TODO: fill with real request/response pairs once the endpoints work.
+### Sample API requests and responses
+###
+### Every response below is REAL output captured from a live run against
+### Gemini (gemini-flash-latest / gemini-flash-lite-latest). Long replies are
+### truncated with an ellipsis; nothing else is edited.
+###
+### Replay them yourself:  uvicorn app.main:app --reload
 
 ### 1. Create a user profile
+#    Zodiac is DERIVED from dob — it is never accepted as input.
 POST http://localhost:8000/users
 Content-Type: application/json
 
@@ -14,7 +20,22 @@ Content-Type: application/json
   "language": "en"
 }
 
+# --> 201
+# {
+#   "user_id": "user-123",
+#   "name": "Rahul",
+#   "dob": "1995-08-15",
+#   "tob": "09:30",
+#   "birth_place": "Delhi",
+#   "language": "en",
+#   "zodiac": "Leo",
+#   "element": "fire",
+#   "missing_fields": []
+# }
+
 ### 2. First message — states a goal worth remembering
+#    Nothing is in the graph yet, so retrieval_strategy ends in :empty.
+#    The goal is extracted AFTER this reply is sent.
 POST http://localhost:8000/chat
 Content-Type: application/json
 
@@ -24,7 +45,22 @@ Content-Type: application/json
   "message": "My name is Rahul. I was born on 15 August 1995 in Delhi. I'm planning to switch jobs next year."
 }
 
+# --> 200
+# {
+#   "response": "Planning a career move next year aligns well with your natural drive to step into spaces where your efforts are genuinely visible and valued. You do your best work when you have a healthy degree of creative ownership and recognition, so make sure this transition isn't just a lateral jump for a quick …",
+#   "user_id": "user-123",
+#   "session_id": "session-456",
+#   "context_used": [
+#     "user_profile"
+#   ],
+#   "retrieval_strategy": "graph:career:empty",
+#   "degraded": false,
+#   "degraded_reason": null
+# }
+
 ### 3. Uses the stored goal
+#    context_used now carries goal:career-change — the proof that
+#    selection pulled it out of the Shared Brain.
 POST http://localhost:8000/chat
 Content-Type: application/json
 
@@ -34,7 +70,23 @@ Content-Type: application/json
   "message": "What should I focus on for my career?"
 }
 
-### 4. Follow-up — should use short-term context only
+# --> 200
+# {
+#   "response": "Right now, your main focus should be on building clear professional visibility and ownership. With your fiery, Leo-driven energy, you do your best work when you aren't hidden in the background or stuck under heavy micromanagement. Aim to establish a distinct personal brand—become the go-to person fo …",
+#   "user_id": "user-123",
+#   "session_id": "session-456",
+#   "context_used": [
+#     "user_profile",
+#     "short_term_context",
+#     "goal:career-change"
+#   ],
+#   "retrieval_strategy": "graph:career",
+#   "degraded": false,
+#   "degraded_reason": null
+# }
+
+### 4. Follow-up — short-term context only
+#    retrieval_strategy is short_term_only: the graph was NOT queried.
 POST http://localhost:8000/chat
 Content-Type: application/json
 
@@ -44,7 +96,23 @@ Content-Type: application/json
   "message": "Why do you say that?"
 }
 
-### 5. New session — must recall from the Shared Brain
+# --> 200
+# {
+#   "response": "It comes down to your core astrological makeup. Being born under the sign of Leo, a fire sign ruled by the Sun, your professional drive is closely tied to pride in your craft and a need for genuine self-expression. When people with this placement are tucked away in repetitive, behind-the-scenes role …",
+#   "user_id": "user-123",
+#   "session_id": "session-456",
+#   "context_used": [
+#     "user_profile",
+#     "short_term_context"
+#   ],
+#   "retrieval_strategy": "short_term_only",
+#   "degraded": false,
+#   "degraded_reason": null
+# }
+
+### 5. NEW session — must recall from the Shared Brain
+#    Different session_id, so short-term is empty. The goal still arrives,
+#    and the reply names the target year it stored earlier.
 POST http://localhost:8000/chat
 Content-Type: application/json
 
@@ -54,5 +122,97 @@ Content-Type: application/json
   "message": "What do you remember about my career goals?"
 }
 
+# --> 200
+# {
+#   "response": "You’ve shared that you are aiming for a significant career change, with your sights set on 2027. With your natural Leo drive, it makes complete sense that you are looking for a path that offers genuine visibility, creative ownership, and work you can feel truly recognized for. \n\nHaving a target a co …",
+#   "user_id": "user-123",
+#   "session_id": "session-999",
+#   "context_used": [
+#     "user_profile",
+#     "goal:career-change"
+#   ],
+#   "retrieval_strategy": "graph:recall",
+#   "degraded": false,
+#   "degraded_reason": null
+# }
+
 ### 6. Inspect the Shared Brain
+###    Superseded facts are included on purpose — the audit trail is the feature.
 GET http://localhost:8000/users/user-123/brain
+
+# {
+#   "user_id": "user-123",
+#   "profile": {
+#     "user_id": "user-123",
+#     "created_at": "2026-10-18T18:41:08.374528+00:00",
+#     "name": "Rahul",
+#     "dob": "1995-08-15",
+#     "tob": "09:30",
+#     "birth_place": "Delhi",
+#     "language": "en",
+#     "updated_at": "2026-10-18T18:41:19.668760+00:00"
+#   },
+#   "facts": [
+#     {
+#       "rel_type": "HAS_ZODIAC",
+#       "node_label": "ZodiacSign",
+#       "key": "leo",
+#       "label": "Leo",
+#       "attributes": {
+#         "element": "fire"
+#       },
+#       "confidence": 1.0,
+#       "updated_at": "2026-10-18T18:41:19.668821+00:00",
+#       "status": "active",
+#       "slot": "zodiac:sun",
+#       "mentions": 2,
+#       "source_session": null,
+#       "created_at": "2026-10-18T18:41:08.374686+00:00",
+#       "valid_to": null,
+#       "superseded_by": null
+#     },
+#     {
+#       "rel_type": "HAS_GOAL",
+#       "node_label": "Goal",
+#       "key": "career-change",
+#       "label": "Career Change",
+#       "attributes": {
+#         "target_year": "2027"
+#       },
+#       "confidence": 0.95,
+#       "updated_at": "2026-10-18T18:41:19.669022+00:00",
+#       "status": "active",
+#       "slot": null,
+#       "mentions": 1,
+#       "source_session": "session-456",
+#       "created_at": "2026-10-18T18:41:19.669017+00:00",
+#       "valid_to": null,
+#       "superseded_by": null
+#     }
+#   ]
+# }
+
+### 7. Right to be forgotten
+DELETE http://localhost:8000/users/user-123/memory
+
+# --> 200
+# { "user_id": "user-123", "removed": 3 }
+
+### 8. Liveness + which brain backend is actually live
+GET http://localhost:8000/health
+
+# --> 200
+# { "status": "ok", "brain": { "backend": "InMemoryBrainStore", "healthy": true } }
+
+### 9. Invalid input is the ONLY 4xx — everything else degrades to a 200
+POST http://localhost:8000/chat
+Content-Type: application/json
+
+{
+  "user_id": "user-123",
+  "session_id": "session-456",
+  "message": ""
+}
+
+# --> 422 Unprocessable Entity
+# { "detail": [ { "type": "string_too_short", "loc": ["body", "message"], ... } ] }
